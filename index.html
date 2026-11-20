@@ -1,1288 +1,277 @@
-<!-- ... existing code ... -->
-  <title>HTML Live Runner — Instant 50 MB HTML &amp; Game Sandbox</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>drop file here</title>
 
-  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            studio: {
-              bg: '#0B0E14',
-              surface: '#131822',
-              border: '#1E2634',
-              hover: '#1A2230',
-            }
-          }
-        }
-      }
-    };
-  </script>
 
   <style>
-    /* Base layout & smooth transitions */
     html, body {
-      height: 100%;
       margin: 0;
       padding: 0;
-      background-color: #0B0E14;
-      color: #f8fafc;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      color: #737373;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      overflow-x: hidden;
-    }
-
-    /* Subtle architectural studio grid background */
-    .canvas-grid {
-      background-color: #0B0E14;
-      background-image:
-        radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.09) 0%, transparent 55%),
-        linear-gradient(to right, rgba(30, 38, 52, 0.45) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(30, 38, 52, 0.45) 1px, transparent 1px);
-      background-size: 100% 100%, 28px 28px, 28px 28px;
-    }
-
-    /* Smooth viewport frame transition */
-    #preview-frame-wrapper {
-      transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                  height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-                  border-radius 0.28s ease,
-                  box-shadow 0.28s ease;
-    }
-
-    /* Animated dashed dropzone highlight */
-    .dropzone-active {
-      border-color: #3b82f6 !important;
-      background-color: rgba(59, 130, 246, 0.08) !important;
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16), 0 20px 40px -15px rgba(37, 99, 235, 0.35);
-      transform: scale(1.008);
-    }
-
-    /* Zen / fallback fullscreen mode when native Fullscreen API is blocked by outer sandbox */
-    .zen-fullscreen-stage {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 60 !important;
+      overflow: hidden;
     }
   </style>
 </head>
-<body class="antialiased selection:bg-blue-500/30 selection:text-blue-200 flex flex-col h-screen overflow-hidden bg-[#0B0E14]">
-<!-- ... existing code ... -->
-      <!-- Dismiss Button -->
-      <button
-        id="dismiss-error-btn"
-        type="button"
-        aria-label="Dismiss error"
-        class="shrink-0 p-1.5 rounded-lg text-rose-300 hover:text-white hover:bg-rose-800/60 transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  </div>
+<body class="bg-black w-screen h-screen overflow-hidden select-none">
 
-  <!-- =====================================================================
-       CONFIRMATION TOAST (Displays brief feedback on \ exit or pointer lock)
-       ===================================================================== -->
-  <div
-    id="status-toast"
-    role="status"
-    aria-live="polite"
-    class="pointer-events-none fixed bottom-5 left-1/2 -translate-x-1/2 z-50 opacity-0 translate-y-2 transition-all duration-200"
+  <!-- Hidden Universal File Input (accepts any file type) -->
+  <input
+    id="file-input"
+    type="file"
+    class="hidden"
+    aria-hidden="true"
+  />
+
+  <!-- Pure Black Drop / Click Screen -->
+  <main
+    id="drop-screen"
+    role="button"
+    tabindex="0"
+    aria-label="Drop file here or click to choose a file"
+    class="w-full h-full bg-black flex flex-col items-center justify-center cursor-pointer focus:outline-none"
   >
-    <div class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#131822]/95 backdrop-blur-md border border-[#1E2634] shadow-2xl shadow-black/80 text-xs sm:text-sm font-medium text-slate-200">
-      <span id="toast-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-      <span id="toast-text">Exited runner via \</span>
-    </div>
-  </div>
+    <p
+      id="drop-label"
+      class="text-xs sm:text-sm font-normal tracking-wide text-neutral-500 transition-colors duration-150"
+    >
+      drop file here
+    </p>
+    <p
+      id="status-label"
+      class="mt-2 text-[11px] text-rose-400/90 opacity-0 transition-opacity duration-200 pointer-events-none"
+    ></p>
+  </main>
 
-  <!-- =====================================================================
-       GLOBAL DRAG-AND-DROP OVERLAY (Captures drops even when iframe is active)
-       ===================================================================== -->
+  <!-- Drag Overlay (only visible while actively dragging a file over a running view) -->
   <div
-    id="global-drop-overlay"
-    class="hidden fixed inset-0 z-40 bg-[#0B0E14]/90 backdrop-blur-sm border-2 border-dashed border-blue-400 m-3 rounded-2xl flex flex-col items-center justify-center p-6 text-center pointer-events-auto transition-opacity duration-150"
+    id="drag-overlay"
+    class="hidden fixed inset-0 z-30 bg-black/90 flex items-center justify-center pointer-events-none"
   >
-    <div class="w-16 h-16 rounded-2xl bg-blue-500/15 border border-blue-400/40 flex items-center justify-center text-blue-400 mb-4 shadow-lg shadow-blue-500/10">
-      <svg class="w-8 h-8 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-      </svg>
-    </div>
-    <p class="text-xl font-semibold text-white">Drop HTML file to load &amp; run</p>
-    <p class="text-sm text-slate-300 mt-1.5">Replaces the current preview immediately &bull; <span class="text-blue-400 font-medium">Max file size: 50 MB</span></p>
+    <p class="text-xs sm:text-sm font-normal tracking-wide text-neutral-300">
+      drop file here
+    </p>
   </div>
 
-  <!-- =====================================================================
-       VIEW 1: LANDING / UPLOAD SCREEN
-       ===================================================================== -->
-  <div id="upload-view" class="flex-1 flex flex-col canvas-grid overflow-y-auto">
-    <!-- Top Brand Header -->
-    <header class="w-full border-b border-[#1E2634] bg-[#131822]/90 backdrop-blur-md">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shadow-md shadow-blue-500/20">
-            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-            </svg>
-          </div>
-          <span class="font-semibold text-base tracking-tight text-white">HTML Live Runner</span>
-          <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-            MAX 50 MB
-          </span>
-        </div>
+  <!-- Fullscreen Sandbox Iframe (100% viewport, zero toolbars, pointer-lock enabled) -->
+  <iframe
+    id="runner-frame"
+    title="File Runner"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock allow-orientation-lock"
+    allow="pointer-lock; fullscreen; autoplay; gamepad; keyboard-map; clipboard-read; clipboard-write"
+    class="hidden fixed inset-0 w-screen h-screen border-0 bg-black z-20"
+  ></iframe>
 
-        <button
-          id="load-demo-btn"
-          type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-white bg-[#1A2230] hover:bg-[#222C3E] border border-[#1E2634] transition-colors"
-        >
-          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-          </svg>
-          Try Game Sandbox Demo
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Centered Upload Zone -->
-    <main class="flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-14">
-      <div class="w-full max-w-2xl">
-        <!-- Hero Heading -->
-        <div class="text-center mb-7">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-xs font-medium mb-4">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Game-Ready Blob URL Engine &bull; WebGL &amp; Pointer Lock
-          </div>
-          <h1 class="text-2xl sm:text-4xl font-bold tracking-tight text-white">
-            Run any HTML app or game instantly
-          </h1>
-          <p class="text-slate-400 text-sm sm:text-base mt-2.5 max-w-lg mx-auto leading-relaxed">
-            Launch single-file HTML builds, Eaglercraft clients, WebGL games, and prototypes up to <span class="text-slate-200 font-medium">50 MB</span> with full keyboard passthrough and mouse lock.
-          </p>
-        </div>
-
-        <!-- Drag & Drop Zone Card -->
-        <div
-          id="drop-zone"
-          role="button"
-          tabindex="0"
-          aria-label="Upload HTML file by clicking or dragging and dropping"
-          class="group relative rounded-2xl bg-[#131822]/95 backdrop-blur-md border-2 border-dashed border-[#1E2634] hover:border-blue-500/70 p-8 sm:p-11 text-center cursor-pointer transition-all duration-200 shadow-2xl shadow-black/80 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-        >
-          <!-- Top-Right MAX 50 MB Badge -->
-          <div class="absolute top-4 right-4">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold bg-[#0B0E14] text-emerald-400 border border-[#1E2634]">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              MAX 50 MB
-            </span>
-          </div>
-
-          <!-- Upload Icon Badge -->
-          <div class="mx-auto w-16 h-16 rounded-2xl bg-[#0B0E14] group-hover:bg-blue-500/15 border border-[#1E2634] group-hover:border-blue-500/40 flex items-center justify-center text-slate-300 group-hover:text-blue-400 transition-all duration-200 mb-5 shadow-inner">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-          </div>
-
-          <h2 class="text-lg sm:text-xl font-semibold text-white">
-            Drag &amp; drop your HTML file here
-          </h2>
-          <p class="text-sm text-slate-400 mt-1.5">
-            Supports <code class="font-mono text-xs px-1.5 py-0.5 rounded bg-[#0B0E14] text-slate-200 border border-[#1E2634]">.html</code> and <code class="font-mono text-xs px-1.5 py-0.5 rounded bg-[#0B0E14] text-slate-200 border border-[#1E2634]">.htm</code> single-file apps &amp; offline game clients
-          </p>
-
-          <!-- Primary File Picker Button -->
-          <div class="mt-6">
-            <button
-              id="select-file-btn"
-              type="button"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 transition-all duration-150"
-            >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-              </svg>
-              Choose HTML File
-            </button>
-          </div>
-
-          <!-- Quick Feature Pills -->
-          <div class="mt-7 pt-5 border-t border-[#1E2634] flex flex-wrap items-center justify-center gap-2.5 text-xs">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0B0E14] border border-[#1E2634] text-slate-300 font-medium">
-              <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-              WASD &amp; Full Keys
-            </span>
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0B0E14] border border-[#1E2634] text-slate-300 font-medium">
-              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
-              </svg>
-              Pointer Lock
-            </span>
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0B0E14] border border-[#1E2634] text-slate-300 font-medium">
-              <kbd class="px-1.5 py-0.5 text-[11px] font-mono bg-[#131822] border border-[#1E2634] rounded text-amber-300">\</kbd>
-              Press \ to Exit
-            </span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- =====================================================================
-       VIEW 2: ACTIVE RUNNER WORKSPACE (Top Control Toolbar + 100vh-56px Stage)
-       ===================================================================== -->
-  <div id="runner-view" class="hidden flex-col h-screen w-full overflow-hidden bg-[#0B0E14]">
-    <!-- Top Control Toolbar (#131822 studio header) -->
-    <header
-      id="runner-toolbar"
-      class="h-14 shrink-0 bg-[#131822] border-b border-[#1E2634] px-3 sm:px-4 flex items-center justify-between gap-2 z-30 select-none"
-    >
-      <!-- Left: Brand + Loaded File Metadata -->
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="w-7 h-7 shrink-0 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shadow-sm">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-          </svg>
-        </div>
-
-        <div class="flex items-center gap-2 min-w-0 bg-[#0B0E14] border border-[#1E2634] px-2.5 py-1 rounded-lg">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0" title="Running"></span>
-          <span id="file-info-label" class="text-xs font-mono text-slate-200 truncate max-w-[120px] sm:max-w-[210px] xl:max-w-xs">
-            index.html &bull; 0.00 / 50 MB
-          </span>
-        </div>
-
-        <!-- Live Mouse Lock Status Badge + Lock Mouse Button -->
-        <div class="flex items-center gap-1.5">
-          <span
-            id="pointer-lock-badge"
-            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium bg-[#0B0E14] border border-[#1E2634] text-slate-400 transition-colors"
-            title="Live Pointer Lock status"
-          >
-            <span id="pointer-lock-dot" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-            <span id="pointer-lock-text">Mouse Free</span>
-          </span>
-
-          <button
-            id="lock-mouse-btn"
-            type="button"
-            tabindex="-1"
-            title="Focus game canvas and lock mouse pointer for 3D look"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition-colors"
-          >
-            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
-            </svg>
-            <span class="hidden md:inline">Lock Mouse</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Center: Viewport Switcher (Full / Tablet 768px / Mobile 375px) -->
-      <div
-        role="group"
-        aria-label="Viewport size switcher"
-        class="hidden xl:flex items-center bg-[#0B0E14] border border-[#1E2634] p-1 rounded-lg"
-      >
-        <button
-          type="button"
-          tabindex="-1"
-          data-viewport="full"
-          class="viewport-btn active inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#1E2634] text-white shadow-sm transition-all"
-          title="Full Width (100%)"
-        >
-          <span>Full</span>
-        </button>
-
-        <button
-          type="button"
-          tabindex="-1"
-          data-viewport="tablet"
-          class="viewport-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition-all"
-          title="Tablet (768px)"
-        >
-          <span>Tablet 768px</span>
-        </button>
-
-        <button
-          type="button"
-          tabindex="-1"
-          data-viewport="mobile"
-          class="viewport-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition-all"
-          title="Mobile (375px)"
-        >
-          <span>Mobile 375px</span>
-        </button>
-      </div>
-
-      <!-- Right: Action Controls (Reload, Fullscreen, Upload New, Exit \) -->
-      <div class="flex items-center gap-1.5 shrink-0">
-        <!-- Reload / Restart -->
-        <button
-          id="reload-btn"
-          type="button"
-          tabindex="-1"
-          title="Reload / Restart HTML file"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#1A2230] hover:bg-[#222C3E] text-slate-200 border border-[#1E2634] transition-colors"
-        >
-          <svg id="reload-icon" class="w-3.5 h-3.5 text-blue-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-          <span class="hidden lg:inline">Reload</span>
-        </button>
-
-        <!-- Fullscreen Toggle -->
-        <button
-          id="fullscreen-btn"
-          type="button"
-          tabindex="-1"
-          title="View in Fullscreen"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#1A2230] hover:bg-[#222C3E] text-slate-200 border border-[#1E2634] transition-colors"
-        >
-          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-          </svg>
-          <span class="hidden lg:inline">Fullscreen</span>
-        </button>
-
-        <!-- Upload New -->
-        <button
-          id="upload-new-btn"
-          type="button"
-          tabindex="-1"
-          title="Upload a new HTML file"
-          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500 hover:bg-blue-400 text-white transition-colors shadow-sm"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          <span class="hidden sm:inline">Upload New</span>
-        </button>
-
-        <!-- Prominent Exit (\) Button -->
-        <button
-          id="close-runner-btn"
-          type="button"
-          tabindex="-1"
-          title="Exit runner and return to upload screen (Shortcut: \)"
-          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-rose-200 border border-rose-500/35 transition-colors"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span>Exit</span>
-          <kbd class="px-1.5 py-0.2 text-[10px] font-mono bg-rose-950/80 border border-rose-500/30 rounded text-rose-200">\</kbd>
-        </button>
-      </div>
-    </header>
-
-    <!-- Preview Canvas Area (100vh minus the 3.5rem / 56px top toolbar) -->
-    <main
-      id="preview-stage"
-      class="relative w-full h-[calc(100vh-3.5rem)] canvas-grid flex items-center justify-center overflow-hidden"
-    >
-      <!-- Subtle Loading Overlay for large 20-50 MB files -->
-      <div
-        id="iframe-loading-indicator"
-        class="hidden absolute inset-0 z-20 bg-[#0B0E14]/80 backdrop-blur-xs flex flex-col items-center justify-center pointer-events-none"
-      >
-        <div class="w-9 h-9 border-2 border-blue-500/30 border-t-blue-400 rounded-full animate-spin mb-2.5"></div>
-        <span class="text-xs font-mono text-slate-300">Streaming HTML bundle...</span>
-      </div>
-
-      <!-- Floating Exit Pill when in Fallback Zen Fullscreen -->
-      <button
-        id="exit-zen-fullscreen-btn"
-        type="button"
-        tabindex="-1"
-        class="hidden fixed top-3 right-3 z-50 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#131822]/95 hover:bg-[#1A2230] text-slate-200 border border-[#1E2634] text-xs font-medium shadow-xl backdrop-blur-md transition-all"
-      >
-        <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-        </svg>
-        Exit Fullscreen (or press \)
-      </button>
-
-      <!-- Responsive Viewport Container -->
-      <div
-        id="preview-frame-wrapper"
-        class="w-full h-full bg-black overflow-hidden relative"
-      >
-        <iframe
-          id="sandbox-iframe"
-          title="HTML Live Preview"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock allow-orientation-lock"
-          allow="pointer-lock; fullscreen; autoplay; gamepad; keyboard-map; clipboard-read; clipboard-write"
-          class="w-full h-full border-0 block bg-black"
-        ></iframe>
-      </div>
-    </main>
-  </div>
-
-  <!-- =====================================================================
-       APPLICATION LOGIC
-       ===================================================================== -->
   <script>
     (function () {
       'use strict';
 
-      // Strict 50 MB limit in binary bytes (52,428,800 bytes)
-      const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
-      const MAX_FILE_SIZE_MB = 50;
+      // 50 MB hard limit in bytes
+      const MAX_BYTES = 50 * 1024 * 1024;
 
-      // Application State
-      let currentFile = null;
-      let currentObjectUrl = null;
-      let currentViewport = 'full'; // 'full' | 'tablet' | 'mobile'
-      let dragDepthCounter = 0;
-      let isZenFullscreen = false;
-      let iframeHookInterval = null;
-      let toastTimeout = null;
+      const fileInput = document.getElementById('file-input');
+      const dropScreen = document.getElementById('drop-screen');
+      const dropLabel = document.getElementById('drop-label');
+      const statusLabel = document.getElementById('status-label');
+      const dragOverlay = document.getElementById('drag-overlay');
+      const runnerFrame = document.getElementById('runner-frame');
 
-      // DOM References
-      const fileInput = document.getElementById('html-file-input');
-      const uploadView = document.getElementById('upload-view');
-      const runnerView = document.getElementById('runner-view');
-      const dropZone = document.getElementById('drop-zone');
-      const selectFileBtn = document.getElementById('select-file-btn');
-      const loadDemoBtn = document.getElementById('load-demo-btn');
-      const globalDropOverlay = document.getElementById('global-drop-overlay');
-
-      const errorBanner = document.getElementById('error-banner');
-      const errorTitle = document.getElementById('error-title');
-      const errorMessage = document.getElementById('error-message');
-      const dismissErrorBtn = document.getElementById('dismiss-error-btn');
-
-      const statusToast = document.getElementById('status-toast');
-      const toastDot = document.getElementById('toast-dot');
-      const toastText = document.getElementById('toast-text');
-
-      const fileInfoLabel = document.getElementById('file-info-label');
-      const pointerLockBadge = document.getElementById('pointer-lock-badge');
-      const pointerLockDot = document.getElementById('pointer-lock-dot');
-      const pointerLockText = document.getElementById('pointer-lock-text');
-      const lockMouseBtn = document.getElementById('lock-mouse-btn');
-
-      const previewStage = document.getElementById('preview-stage');
-      const previewFrameWrapper = document.getElementById('preview-frame-wrapper');
-      const sandboxIframe = document.getElementById('sandbox-iframe');
-      const loadingIndicator = document.getElementById('iframe-loading-indicator');
-
-      const viewportButtons = document.querySelectorAll('.viewport-btn');
-      const reloadBtn = document.getElementById('reload-btn');
-      const reloadIcon = document.getElementById('reload-icon');
-      const fullscreenBtn = document.getElementById('fullscreen-btn');
-      const exitZenFullscreenBtn = document.getElementById('exit-zen-fullscreen-btn');
-      const uploadNewBtn = document.getElementById('upload-new-btn');
-      const closeRunnerBtn = document.getElementById('close-runner-btn');
+      let activeObjectUrl = null;
+      let isRunning = false;
+      let dragCounter = 0;
+      let statusTimer = null;
 
       /**
-       * Formats byte count into a human-readable MB string.
+       * Shows a brief subtle message below "drop file here" (e.g., if > 50 MB).
        */
-      function formatBytesToMB(bytes) {
-        const mb = bytes / (1024 * 1024);
-        if (bytes > MAX_FILE_SIZE_BYTES && mb < 50.05) {
-          return `${mb.toFixed(4)} MB`;
-        }
-        return `${mb.toFixed(2)} MB`;
+      function showStatus(text) {
+        if (statusTimer) clearTimeout(statusTimer);
+        statusLabel.textContent = text;
+        statusLabel.classList.remove('opacity-0');
+        statusLabel.classList.add('opacity-100');
+        statusTimer = setTimeout(() => {
+          statusLabel.classList.add('opacity-0');
+          statusLabel.classList.remove('opacity-100');
+        }, 3000);
       }
 
       /**
-       * Displays a brief toast notification at the bottom of the screen.
+       * Frees the current Object URL to avoid memory leaks on large files.
        */
-      function showToast(message, accentColorClass = 'bg-emerald-400') {
-        if (toastTimeout) {
-          clearTimeout(toastTimeout);
-        }
-        toastDot.className = `w-2 h-2 rounded-full ${accentColorClass}`;
-        toastText.textContent = message;
-        statusToast.classList.remove('opacity-0', 'translate-y-2');
-        statusToast.classList.add('opacity-100', 'translate-y-0');
-
-        toastTimeout = setTimeout(() => {
-          statusToast.classList.add('opacity-0', 'translate-y-2');
-          statusToast.classList.remove('opacity-100', 'translate-y-0');
-        }, 2600);
-      }
-
-      /**
-       * Displays the dismissible error banner with title and detailed message.
-       */
-      function showError(title, message) {
-        errorTitle.textContent = title;
-        errorMessage.textContent = message;
-        errorBanner.classList.remove('hidden');
-      }
-
-      /**
-       * Hides the error banner.
-       */
-      function hideError() {
-        errorBanner.classList.add('hidden');
-      }
-
-      /**
-       * Revokes the active Object URL to prevent memory leaks (critical for up to 50 MB files).
-       */
-      function revokeCurrentUrl() {
-        if (currentObjectUrl) {
+      function cleanupUrl() {
+        if (activeObjectUrl) {
           try {
-            URL.revokeObjectURL(currentObjectUrl);
-          } catch (err) {
-            console.warn('Failed to revoke Object URL:', err);
-          }
-          currentObjectUrl = null;
+            URL.revokeObjectURL(activeObjectUrl);
+          } catch (_) {}
+          activeObjectUrl = null;
         }
       }
 
       /**
-       * Finds the primary interactive <canvas> (largest visible canvas) inside the iframe.
+       * Creates a playable Object URL for any file:
+       * - Preserves native MIME types (HTML, SVG, PDF, images, video, audio, text, etc.)
+       * - Defaults unknown/extensionless binary MIME types to text/html so offline HTML bundles run directly
        */
-      function getPrimaryIframeCanvas() {
-        try {
-          const doc = sandboxIframe.contentDocument;
-          if (!doc) return null;
-          const canvases = Array.from(doc.querySelectorAll('canvas'));
-          if (canvases.length === 0) return null;
-          if (canvases.length === 1) return canvases[0];
-
-          // Pick the canvas with the largest rendered area
-          let bestCanvas = canvases[0];
-          let maxArea = 0;
-          for (const c of canvases) {
-            const rect = c.getBoundingClientRect();
-            const area = rect.width * rect.height;
-            if (area > maxArea) {
-              maxArea = area;
-              bestCanvas = c;
-            }
-          }
-          return bestCanvas;
-        } catch (err) {
-          return null;
+      function createPlayableUrl(file) {
+        if (!file.type || file.type === 'application/octet-stream') {
+          return URL.createObjectURL(new Blob([file], { type: 'text/html' }));
         }
+        return URL.createObjectURL(file);
       }
 
       /**
-       * Aggressively transfers keyboard focus into the iframe window and its active <canvas>
-       * so WASD, T, E, Space, 1-9, Shift, and Esc pass straight to games like Eaglercraft.
+       * Loads and runs any file up to 50 MB inside the full-viewport iframe.
        */
-      function focusIframeGame() {
-        if (!currentFile) return;
-        try {
-          sandboxIframe.focus({ preventScroll: true });
-          const win = sandboxIframe.contentWindow;
-          const doc = sandboxIframe.contentDocument;
-          if (win) {
-            win.focus();
-          }
-          const canvas = getPrimaryIframeCanvas();
-          if (canvas) {
-            if (!canvas.hasAttribute('tabindex')) {
-              canvas.setAttribute('tabindex', '0');
-              canvas.style.outline = 'none';
-            }
-            canvas.focus({ preventScroll: true });
-          } else if (doc && doc.body) {
-            if (!doc.body.hasAttribute('tabindex')) {
-              doc.body.setAttribute('tabindex', '-1');
-              doc.body.style.outline = 'none';
-            }
-            doc.body.focus({ preventScroll: true });
-          }
-        } catch (err) {
-          // Ignore cross-origin edge errors if any
-        }
-      }
+      function runFile(file) {
+        if (!file) return;
 
-      /**
-       * Updates the live Mouse Locked / Mouse Free status badge in the top toolbar.
-       */
-      function updatePointerLockBadge() {
-        let isLocked = Boolean(document.pointerLockElement);
-        try {
-          const doc = sandboxIframe.contentDocument;
-          if (doc && doc.pointerLockElement) {
-            isLocked = true;
-          }
-        } catch (err) {
-          // Ignore access errors
-        }
-
-        if (isLocked) {
-          pointerLockBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 transition-colors';
-          pointerLockDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
-          pointerLockText.textContent = 'Mouse Locked';
-        } else {
-          pointerLockBadge.className = 'hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium bg-[#0B0E14] border border-[#1E2634] text-slate-400 transition-colors';
-          pointerLockDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-500';
-          pointerLockText.textContent = 'Mouse Free';
-        }
-      }
-
-      /**
-       * Requests native pointer lock on the active game <canvas> (or iframe body) on user click.
-       */
-      function requestGamePointerLock() {
-        if (!currentFile) return;
-        focusIframeGame();
-
-        try {
-          const doc = sandboxIframe.contentDocument;
-          if (!doc) return;
-
-          // If already locked, release pointer lock cleanly
-          if (document.pointerLockElement || doc.pointerLockElement) {
-            if (doc.exitPointerLock) doc.exitPointerLock();
-            if (document.exitPointerLock) document.exitPointerLock();
-            updatePointerLockBadge();
-            return;
-          }
-
-          const target = getPrimaryIframeCanvas() || doc.body || doc.documentElement;
-          if (target && target.requestPointerLock) {
-            const lockPromise = target.requestPointerLock();
-            if (lockPromise && typeof lockPromise.catch === 'function') {
-              lockPromise.catch(() => {
-                showToast('Click directly inside the game screen to lock mouse', 'bg-blue-400');
-              });
-            }
-          }
-        } catch (err) {
-          showToast('Click directly inside the game screen to lock mouse', 'bg-blue-400');
-        }
-      }
-
-      /**
-       * Attaches capture-phase Backslash (\) exit listeners and pointerlockchange listeners
-       * inside the iframe's window and document so shortcuts never get dropped by dynamic scripts.
-       */
-      function bindIframeRuntimeHooks() {
-        if (!currentFile) return;
-        try {
-          const win = sandboxIframe.contentWindow;
-          const doc = sandboxIframe.contentDocument;
-
-          if (win && !win.__htmlLiveRunnerBound) {
-            win.__htmlLiveRunnerBound = true;
-            win.addEventListener('keydown', handleGlobalKeydownCapture, true);
-          }
-
-          if (doc && !doc.__htmlLiveRunnerDocBound) {
-            doc.__htmlLiveRunnerDocBound = true;
-            doc.addEventListener('keydown', handleGlobalKeydownCapture, true);
-            doc.addEventListener('pointerlockchange', updatePointerLockBadge);
-            doc.addEventListener('pointerlockerror', updatePointerLockBadge);
-            doc.addEventListener('mousedown', () => {
-              // Ensure canvas receives keyboard focus whenever clicked
-              setTimeout(focusIframeGame, 0);
-            }, true);
-          }
-
-          // Ensure dynamically spawned canvases (e.g., Eaglercraft WebGL canvas) stay focusable
-          const canvas = getPrimaryIframeCanvas();
-          if (canvas && !canvas.hasAttribute('tabindex')) {
-            canvas.setAttribute('tabindex', '0');
-            canvas.style.outline = 'none';
-          }
-
-          updatePointerLockBadge();
-        } catch (err) {
-          // Ignore transient initialization states
-        }
-      }
-
-      /**
-       * Validates that the provided File is an HTML file and strictly <= 50 MB.
-       */
-      function validateHtmlFile(file) {
-        if (!file) {
-          return {
-            valid: false,
-            errorTitle: 'No File Selected',
-            errorMessage: 'Please select or drop a valid .html or .htm file.'
-          };
-        }
-
-        const lowerName = file.name.toLowerCase();
-        const hasValidExtension = lowerName.endsWith('.html') || lowerName.endsWith('.htm');
-        const hasValidMime = file.type === '' || file.type === 'text/html';
-
-        if (!hasValidExtension || !hasValidMime) {
-          const formattedSize = formatBytesToMB(file.size);
-          const detectedType = file.type || 'unknown type';
-          return {
-            valid: false,
-            errorTitle: 'Unsupported File Format',
-            errorMessage: `"${file.name}" (${formattedSize}, ${detectedType}) is not an HTML file. Please upload a valid .html or .htm file.`
-          };
-        }
-
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          const formattedSize = formatBytesToMB(file.size);
-          return {
-            valid: false,
-            errorTitle: 'File Size Exceeds 50 MB Limit',
-            errorMessage: `"${file.name}" (${formattedSize}) exceeds the 50.00 MB (${MAX_FILE_SIZE_BYTES.toLocaleString()} bytes) limit.`
-          };
-        }
-
-        return { valid: true };
-      }
-
-      /**
-       * Loads a validated HTML File into the sandboxed iframe via URL.createObjectURL.
-       */
-      function loadHtmlFile(file) {
-        const validation = validateHtmlFile(file);
-        if (!validation.valid) {
-          showError(validation.errorTitle, validation.errorMessage);
+        if (file.size > MAX_BYTES) {
+          const mb = (file.size / (1024 * 1024)).toFixed(1);
+          showStatus(`max size is 50 mb (${mb} mb)`);
           return;
         }
 
-        hideError();
-        revokeCurrentUrl();
+        cleanupUrl();
+        activeObjectUrl = createPlayableUrl(file);
+        isRunning = true;
 
-        currentFile = file;
-
-        // Zero-copy Blob with explicit text/html MIME type for fast 20–50 MB rendering
-        const htmlBlob = new Blob([file], { type: 'text/html' });
-        currentObjectUrl = URL.createObjectURL(htmlBlob);
-
-        // Update toolbar metadata
-        const formattedSize = formatBytesToMB(file.size);
-        fileInfoLabel.textContent = `${file.name} • ${formattedSize} / ${MAX_FILE_SIZE_MB} MB`;
-        fileInfoLabel.title = `${file.name} (${formattedSize} / ${MAX_FILE_SIZE_MB} MB)`;
-
-        // Switch UI from Upload Screen to Runner Workspace
-        uploadView.classList.add('hidden');
-        runnerView.classList.remove('hidden');
-        runnerView.classList.add('flex');
-
-        updatePointerLockBadge();
-
-        // Show loading indicator until iframe fires 'load'
-        loadingIndicator.classList.remove('hidden');
-        sandboxIframe.src = currentObjectUrl;
-
-        // Start periodic hook & focus guardian for dynamically initialized WebGL canvases
-        if (iframeHookInterval) clearInterval(iframeHookInterval);
-        iframeHookInterval = setInterval(bindIframeRuntimeHooks, 750);
+        dropScreen.classList.add('hidden');
+        runnerFrame.classList.remove('hidden');
+        runnerFrame.src = activeObjectUrl;
       }
 
       /**
-       * Reloads / restarts the currently loaded HTML file from scratch.
+       * Exits the running file via Backslash (\), unlocks pointer if locked,
+       * and returns to the pure black "drop file here" screen.
        */
-      function reloadCurrentFile() {
-        if (!currentFile) return;
+      function exitRunner() {
+        if (!isRunning) return;
 
-        // Spin icon feedback
-        reloadIcon.classList.add('rotate-180');
-        setTimeout(() => reloadIcon.classList.remove('rotate-180'), 320);
-
-        loadingIndicator.classList.remove('hidden');
-
-        // Reset to about:blank first so all JS state, timers, and WebGL contexts re-initialize cleanly
-        sandboxIframe.src = 'about:blank';
-        requestAnimationFrame(() => {
-          revokeCurrentUrl();
-          const htmlBlob = new Blob([currentFile], { type: 'text/html' });
-          currentObjectUrl = URL.createObjectURL(htmlBlob);
-          sandboxIframe.src = currentObjectUrl;
-          focusIframeGame();
-        });
-      }
-
-      /**
-       * Exits pointer lock, exits fullscreen, revokes Blob URL, clears iframe,
-       * and returns cleanly to the upload screen.
-       */
-      function closeRunner(viaShortcut = false) {
-        // 1. Release pointer lock if active in either parent or iframe
         try {
-          const doc = sandboxIframe.contentDocument;
+          const doc = runnerFrame.contentDocument;
           if (doc && doc.pointerLockElement && doc.exitPointerLock) {
             doc.exitPointerLock();
           }
           if (document.pointerLockElement && document.exitPointerLock) {
             document.exitPointerLock();
           }
-        } catch (err) {
-          // Ignore pointer lock exit errors
-        }
+        } catch (_) {}
 
-        // 2. Exit Zen or native Fullscreen if active
-        if (isZenFullscreen) {
-          exitZenFullscreen();
-        }
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
         }
 
-        // 3. Stop runtime interval and tear down iframe + Object URL
-        if (iframeHookInterval) {
-          clearInterval(iframeHookInterval);
-          iframeHookInterval = null;
-        }
+        runnerFrame.src = 'about:blank';
+        runnerFrame.classList.add('hidden');
+        dropScreen.classList.remove('hidden');
 
-        sandboxIframe.src = 'about:blank';
-        revokeCurrentUrl();
-        currentFile = null;
+        cleanupUrl();
+        isRunning = false;
         fileInput.value = '';
-        updatePointerLockBadge();
-
-        // 4. Reset viewport to full width for next session
-        setViewport('full');
-
-        // 5. Return to landing upload view
-        runnerView.classList.add('hidden');
-        runnerView.classList.remove('flex');
-        uploadView.classList.remove('hidden');
-
-        if (viaShortcut) {
-          showToast('Exited runner via \\', 'bg-emerald-400');
-        }
       }
 
       /**
-       * Capture-phase keydown handler shared across parent window and iframe window/document.
-       * Handles instant exit via Backslash (\) and guarantees keyboard passthrough into the game.
+       * Non-intrusive key listener: ONLY listens for '\' to exit.
+       * Never intercepts, blocks, or steals WASD, Space, Tab, T, E, Esc, or arrow keys.
        */
-      function handleGlobalKeydownCapture(e) {
-        if (!currentFile) return;
-
-        // Instant exit shortcut: Backslash (\)
-        if (e.key === '\\' || e.code === 'Backslash') {
+      function onKeyDownExitOnly(e) {
+        if (isRunning && (e.key === '\u005C' || e.code === 'Backslash')) {
           e.preventDefault();
-          e.stopPropagation();
-          if (typeof e.stopImmediatePropagation === 'function') {
-            e.stopImmediatePropagation();
-          }
-          closeRunner(true);
-          return;
-        }
-
-        // If a non-exit key was pressed while focus drifted to the parent page,
-        // transfer focus immediately back into the iframe's active <canvas>.
-        if (e.view === window && document.activeElement !== sandboxIframe) {
-          focusIframeGame();
-          if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
-            e.preventDefault();
-          }
+          exitRunner();
         }
       }
 
-      /**
-       * Switches preview container dimensions between 'full' (100%), 'tablet' (768px), and 'mobile' (375px).
-       */
-      function setViewport(mode) {
-        currentViewport = mode;
-
-        viewportButtons.forEach((btn) => {
-          const isMatch = btn.dataset.viewport === mode;
-          if (isMatch) {
-            btn.classList.add('bg-[#1E2634]', 'text-white', 'shadow-sm');
-            btn.classList.remove('text-slate-400', 'hover:text-slate-200');
-          } else {
-            btn.classList.remove('bg-[#1E2634]', 'text-white', 'shadow-sm');
-            btn.classList.add('text-slate-400', 'hover:text-slate-200');
-          }
-        });
-
-        if (mode === 'full') {
-          previewStage.classList.remove('p-4', 'sm:p-6', 'overflow-auto');
-          previewStage.classList.add('overflow-hidden');
-          previewFrameWrapper.style.width = '100%';
-          previewFrameWrapper.style.height = '100%';
-          previewFrameWrapper.classList.remove('rounded-2xl', 'border', 'border-[#1E2634]', 'shadow-2xl', 'shadow-black/80', 'max-w-full');
-        } else if (mode === 'tablet') {
-          previewStage.classList.remove('overflow-hidden');
-          previewStage.classList.add('p-4', 'sm:p-6', 'overflow-auto');
-          previewFrameWrapper.style.width = '768px';
-          previewFrameWrapper.style.height = '100%';
-          previewFrameWrapper.classList.add('rounded-2xl', 'border', 'border-[#1E2634]', 'shadow-2xl', 'shadow-black/80', 'max-w-full');
-        } else if (mode === 'mobile') {
-          previewStage.classList.remove('overflow-hidden');
-          previewStage.classList.add('p-4', 'sm:p-6', 'overflow-auto');
-          previewFrameWrapper.style.width = '375px';
-          previewFrameWrapper.style.height = '100%';
-          previewFrameWrapper.classList.add('rounded-2xl', 'border', 'border-[#1E2634]', 'shadow-2xl', 'shadow-black/80', 'max-w-full');
-        }
-      }
-
-      /**
-       * Enters Zen Fullscreen fallback if native Fullscreen API is restricted by an embedding context.
-       */
-      function enterZenFullscreen() {
-        isZenFullscreen = true;
-        previewStage.classList.add('zen-fullscreen-stage');
-        exitZenFullscreenBtn.classList.remove('hidden');
-        setViewport('full');
-        focusIframeGame();
-      }
-
-      function exitZenFullscreen() {
-        isZenFullscreen = false;
-        previewStage.classList.remove('zen-fullscreen-stage');
-        exitZenFullscreenBtn.classList.add('hidden');
-        focusIframeGame();
-      }
-
-      /**
-       * Toggles true fullscreen mode on the preview frame.
-       */
-      async function toggleFullscreen() {
-        if (isZenFullscreen) {
-          exitZenFullscreen();
-          return;
-        }
-
-        if (document.fullscreenElement) {
-          try {
-            await document.exitFullscreen();
-          } catch (err) {
-            console.warn('Exit fullscreen error:', err);
-          }
-          focusIframeGame();
-          return;
-        }
-
+      // Give the iframe initial focus once on load without taking over keyboard events
+      runnerFrame.addEventListener('load', () => {
+        if (!isRunning) return;
         try {
-          if (previewFrameWrapper.requestFullscreen) {
-            await previewFrameWrapper.requestFullscreen();
-            focusIframeGame();
-          } else {
-            enterZenFullscreen();
+          runnerFrame.focus();
+          if (runnerFrame.contentWindow) {
+            runnerFrame.contentWindow.focus();
+            runnerFrame.contentWindow.addEventListener('keydown', onKeyDownExitOnly, true);
           }
-        } catch (err) {
-          enterZenFullscreen();
-        }
-      }
-
-      /**
-       * Creates and runs an interactive 3D-style FPS / Pointer-Lock & WASD Canvas Demo
-       * so users can immediately test WASD movement, T chat, E inventory, Mouse Lock, and \ exit.
-       */
-      function launchSampleHtmlApp() {
-        const sampleCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Game Input &amp; Pointer Lock Testbed</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0B0E14;
-      color: #f8fafc;
-      font-family: 'Inter', system-ui, sans-serif;
-      overflow: hidden;
-      height: 100vh;
-      user-select: none;
-    }
-    canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
-    .hud {
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      background: rgba(19, 24, 34, 0.85);
-      backdrop-filter: blur(10px);
-      border: 1px solid #1E2634;
-      padding: 14px 18px;
-      border-radius: 14px;
-      pointer-events: none;
-      max-width: 340px;
-    }
-    .hud h1 { font-size: 14px; font-weight: 600; color: #34d399; margin-bottom: 4px; }
-    .hud p { font-size: 12px; color: #94a3b8; line-height: 1.5; }
-    .keys { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .key {
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #0B0E14;
-      border: 1px solid #1E2634;
-      font-family: monospace;
-      font-size: 11px;
-      color: #64748b;
-    }
-    .key.active { background: #3b82f6; color: #fff; border-color: #60a5fa; }
-    .banner {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(19, 24, 34, 0.9);
-      border: 1px solid #1E2634;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 12px;
-      color: #cbd5e1;
-      pointer-events: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="hud">
-    <h1>Game Input &amp; Pointer Lock Testbed</h1>
-    <p>Click canvas or press <strong>Lock Mouse</strong> above to lock cursor &amp; look around. Press <strong>\\</strong> anytime to exit.</p>
-    <div class="keys">
-      <span class="key" id="k-KeyW">W</span>
-      <span class="key" id="k-KeyA">A</span>
-      <span class="key" id="k-KeyS">S</span>
-      <span class="key" id="k-KeyD">D</span>
-      <span class="key" id="k-Space">SPACE</span>
-      <span class="key" id="k-KeyT">T (Chat)</span>
-      <span class="key" id="k-KeyE">E (Inv)</span>
-    </div>
-  </div>
-  <div class="banner" id="status-line">Click anywhere on canvas to engage Pointer Lock</div>
-  <canvas id="game"></canvas>
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const statusLine = document.getElementById('status-line');
-    let w, h;
-    function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    const player = { x: 0, z: 0, yaw: 0, pitch: 0, jump: 0, vy: 0 };
-    const keys = {};
-    let chatOpen = false;
-    let invOpen = false;
-
-    canvas.addEventListener('click', () => {
-      if (document.pointerLockElement !== canvas) {
-        canvas.requestPointerLock();
-      }
-    });
-
-    document.addEventListener('pointerlockchange', () => {
-      const locked = document.pointerLockElement === canvas;
-      statusLine.textContent = locked
-        ? 'Pointer LOCKED — Move mouse to look, WASD to move, ESC to free cursor, \\ to exit runner'
-        : 'Pointer FREE — Click canvas or Lock Mouse button to lock cursor';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement === canvas) {
-        player.yaw += e.movementX * 0.003;
-        player.pitch = Math.max(-0.6, Math.min(0.6, player.pitch - e.movementY * 0.003));
-      }
-    });
-
-    window.addEventListener('keydown', (e) => {
-      keys[e.code] = true;
-      const badge = document.getElementById('k-' + e.code);
-      if (badge) badge.classList.add('active');
-      if (e.code === 'Space' && player.jump === 0) player.vy = 9;
-      if (e.code === 'KeyT') chatOpen = !chatOpen;
-      if (e.code === 'KeyE') invOpen = !invOpen;
-    });
-
-    window.addEventListener('keyup', (e) => {
-      keys[e.code] = false;
-      const badge = document.getElementById('k-' + e.code);
-      if (badge) badge.classList.remove('active');
-    });
-
-    function loop() {
-      const speed = 4.2;
-      const forward = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
-      const strafe = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
-
-      player.x += (Math.sin(player.yaw) * forward + Math.cos(player.yaw) * strafe) * speed;
-      player.z += (Math.cos(player.yaw) * forward - Math.sin(player.yaw) * strafe) * speed;
-
-      player.jump += player.vy;
-      player.vy -= 0.55;
-      if (player.jump <= 0) { player.jump = 0; player.vy = 0; }
-
-      const horizon = h * 0.5 + player.pitch * h * 0.6 + player.jump * 2;
-      ctx.fillStyle = '#0B0E14';
-      ctx.fillRect(0, 0, w, horizon);
-      ctx.fillStyle = '#111827';
-      ctx.fillRect(0, horizon, w, h - horizon);
-
-      // Perspective 3D floor grid
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.28)';
-      ctx.lineWidth = 1;
-      for (let i = -12; i <= 12; i++) {
-        const worldX = i * 80 - (player.x % 80);
-        ctx.beginPath();
-        ctx.moveTo(w * 0.5 + worldX * 0.25, horizon);
-        ctx.lineTo(w * 0.5 + worldX * 2.8, h);
-        ctx.stroke();
-      }
-      for (let d = 1; d <= 14; d++) {
-        const zOff = ((d * 60 - (player.z % 60)) / 840);
-        const y = horizon + Math.pow(zOff, 1.5) * (h - horizon);
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-
-      // Center crosshair
-      ctx.strokeStyle = '#34d399';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - 10, h / 2); ctx.lineTo(w / 2 + 10, h / 2);
-      ctx.moveTo(w / 2, h / 2 - 10); ctx.lineTo(w / 2, h / 2 + 10);
-      ctx.stroke();
-
-      if (chatOpen) {
-        ctx.fillStyle = 'rgba(19, 24, 34, 0.9)';
-        ctx.fillRect(16, h - 92, 320, 34);
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '13px monospace';
-        ctx.fillText('> [T] Chat Overlay Active (Press T to toggle)', 26, h - 71);
-      }
-      if (invOpen) {
-        ctx.fillStyle = 'rgba(19, 24, 34, 0.92)';
-        ctx.strokeStyle = '#3b82f6';
-        ctx.fillRect(w / 2 - 140, h / 2 - 80, 280, 160);
-        ctx.strokeRect(w / 2 - 140, h / 2 - 80, 280, 160);
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = '600 14px sans-serif';
-        ctx.fillText('[E] Inventory Open — Press E to close', w / 2 - 118, h / 2 + 4);
-      }
-
-      requestAnimationFrame(loop);
-    }
-    loop();
-  <\/script>
-</body>
-</html>`;
-
-        const demoFile = new File([sampleCode], 'game-input-pointerlock-demo.html', {
-          type: 'text/html'
-        });
-        loadHtmlFile(demoFile);
-      }
-
-      // ===================================================================
-      // EVENT LISTENERS
-      // ===================================================================
-
-      // Trigger hidden file input
-      selectFileBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.click();
+        } catch (_) {}
       });
 
-      dropZone.addEventListener('click', () => {
-        fileInput.click();
-      });
+      window.addEventListener('keydown', onKeyDownExitOnly, true);
 
-      dropZone.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+      // Click or Enter/Space on the black screen opens the file picker
+      dropScreen.addEventListener('click', () => fileInput.click());
+      dropScreen.addEventListener('keydown', (e) => {
+        if (!isRunning && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           fileInput.click();
         }
       });
 
-      uploadNewBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        fileInput.click();
-      });
-
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
-        if (file) {
-          loadHtmlFile(file);
-        }
-        // Reset input value so selecting the exact same file again triggers 'change'
-        fileInput.value = '';
+        if (file) runFile(file);
       });
 
-      // Demo button
-      loadDemoBtn.addEventListener('click', launchSampleHtmlApp);
-
-      // Dismiss error banner
-      dismissErrorBtn.addEventListener('click', hideError);
-
-      // Iframe load completion: bind runtime hooks and immediately focus game canvas
-      sandboxIframe.addEventListener('load', () => {
-        loadingIndicator.classList.add('hidden');
-        if (!currentFile) return;
-
-        bindIframeRuntimeHooks();
-        focusIframeGame();
-
-        // Re-focus at staggered intervals as Eaglercraft / WebGL apps initialize canvases
-        setTimeout(() => { bindIframeRuntimeHooks(); focusIframeGame(); }, 100);
-        setTimeout(() => { bindIframeRuntimeHooks(); focusIframeGame(); }, 450);
-        setTimeout(() => { bindIframeRuntimeHooks(); focusIframeGame(); }, 1200);
+      // Hover state on black screen
+      dropScreen.addEventListener('mouseenter', () => {
+        dropLabel.classList.replace('text-neutral-500', 'text-neutral-300');
+      });
+      dropScreen.addEventListener('mouseleave', () => {
+        dropLabel.classList.replace('text-neutral-300', 'text-neutral-500');
       });
 
-      // Clicking anywhere on the preview stage returns keyboard focus into the game canvas
-      previewStage.addEventListener('mousedown', () => {
-        if (currentFile) {
-          setTimeout(focusIframeGame, 0);
+      // Global Drag & Drop anywhere on the window (works both on black screen and over running content)
+      function hasFiles(e) {
+        return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+      }
+
+      window.addEventListener('dragenter', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        dragCounter++;
+        dropLabel.classList.replace('text-neutral-500', 'text-neutral-200');
+        if (isRunning) {
+          dragOverlay.classList.remove('hidden');
         }
       });
 
-      // Lock Mouse button in top control bar
-      lockMouseBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        requestGamePointerLock();
+      window.addEventListener('dragover', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
       });
 
-      // Sync pointer lock badge on parent document changes
-      document.addEventListener('pointerlockchange', updatePointerLockBadge);
-      document.addEventListener('pointerlockerror', updatePointerLockBadge);
-
-      // Toolbar actions (blur button immediately so Space/Enter never re-triggers toolbar controls)
-      reloadBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        reloadCurrentFile();
+      window.addEventListener('dragleave', (e) => {
+        if (!hasFiles(e)) return;
+        dragCounter = Math.max(0, dragCounter - 1);
+        if (dragCounter === 0) {
+          dropLabel.classList.replace('text-neutral-200', 'text-neutral-500');
+          dragOverlay.classList.add('hidden');
+        }
       });
 
-      fullscreenBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        toggleFullscreen();
+      window.addEventListener('drop', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        dragCounter = 0;
+        dropLabel.classList.replace('text-neutral-200', 'text-neutral-500');
+        dragOverlay.classList.add('hidden');
+
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) runFile(file);
       });
 
-      exitZenFullscreenBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        exitZenFullscreen();
-      });
-
-      closeRunnerBtn.addEventListener('click', (e) => {
-        e.currentTarget.blur();
-        closeRunner(false);
-      });
-
-      viewportButtons.forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          e.currentTarget.blur();
-          setViewport(btn.dataset.viewport);
-          focusIframeGame();
-        });
-      });
-
-      // Capture-phase keydown listener on parent window for Backslash (\) exit & focus passthrough
-      window.addEventListener('keydown', handleGlobalKeydownCapture, true);
-
-      // ===================================================================
-      // GLOBAL & DROPZONE DRAG-AND-DROP HANDLING
-      // ===================================================================
-<!-- ... existing code ... -->
+      window.addEventListener('beforeunload', cleanupUrl);
+    })();
+  </script>
+</body>
+</html>

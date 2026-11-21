@@ -79,8 +79,8 @@
     (function () {
       'use strict';
 
-      // 500 MB hard limit in bytes
-      const MAX_BYTES = 500 * 1024 * 1024;
+      // 1 GB hard limit in bytes
+      const MAX_BYTES = 1024 * 1024 * 1024;
 
       const fileInput = document.getElementById('file-input');
       const dropScreen = document.getElementById('drop-screen');
@@ -95,7 +95,7 @@
       let statusTimer = null;
 
       /**
-       * Shows a brief subtle message below "drop file here" (e.g., if > 50 MB).
+       * Shows a brief subtle message below "drop file here" (e.g., if > 1 GB).
        */
       function showStatus(text) {
         if (statusTimer) clearTimeout(statusTimer);
@@ -133,14 +133,14 @@
       }
 
       /**
-       * Loads and runs any file up to 50 MB inside the full-viewport iframe.
+       * Loads and runs any file up to 1 GB inside the full-viewport iframe.
        */
       function runFile(file) {
         if (!file) return;
 
         if (file.size > MAX_BYTES) {
-          const mb = (file.size / (1024 * 1024)).toFixed(1);
-          showStatus(`max size is 50 mb (${mb} mb)`);
+          const gb = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+          showStatus(`max size is 1 gb (${gb} gb)`);
           return;
         }
 
